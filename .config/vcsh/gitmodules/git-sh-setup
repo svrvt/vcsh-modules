@@ -1,10 +1,13 @@
-#!/bin/bash
+t_git_sh_setup_rc=0
 
 saved_git_exec_path="$GIT_EXEC_PATH"
 GIT_EXEC_PATH="${GIT_EXEC_PATH_ORIG}"
-source "${GIT_EXEC_PATH_ORIG}/git-sh-setup" "$@"
+. "${GIT_EXEC_PATH_DEFDIR}/git-sh-setup" "$@" \
+    || t_git_sh_setup_rc=$?
 GIT_EXEC_PATH="$saved_git_exec_path"
 unset saved_git_exec_path
+
+return ${t_git_sh_setup_rc}
 
 # vim600: set filetype=sh fileformat=unix softtabstop=4:
 # vim: set expandtab smarttab:

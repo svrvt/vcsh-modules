@@ -1,20 +1,134 @@
-#!/bin/bash
+#!/bin/sh
 
-if [ -e ".gitmodules" ]; then
-    echo ".gitmodules exists"
-    exit 2
+# TODO: DEBUG: remove once done {{{
+f_vcsh_submodule_echo_to_stderr()
+{
+    echo "${0##*/}:" "$@" 1>&2
+}
+
+# TODO: document
+f_vcsh_submodule_abort()
+{
+    l_vcsh_submodule_abort_rc=0
+    case "${1}" in
+        *[a-zA-Z_,./:]* ) : ;;
+        [0-9]* ) l_vcsh_submodule_abort_rc=$1 && shift ;;
+    esac
+
+    f_vcsh_submodule_echo_to_stderr "ERROR:" "$@"
+    exit ${l_vcsh_submodule_abort_rc}
+}
+
+f_vcsh_submodule_debug()
+{
+    [ ${VCSH_MODULES_DEBUG} -ne 0 ] || return 0
+    f_vcsh_submodule_echo_to_stderr "[debug]" "$@"
+}
+
+f_vcsh_submodule_run()
+{
+    f_vcsh_submodule_debug "about to run: '$*'"
+    l_vcsh_submodule_run_rc=0
+    "$@" || l_vcsh_submodule_run_rc=$?
+    f_vcsh_submodule_debug " rc: ${l_vcsh_submodule_run_rc}"
+    return ${l_vcsh_submodule_run_rc}
+}
+
+# TODO: document options
+f_vcsh_submodule_run_gitsubm_orig()
+{
+    unset \
+        l_vcsh_submodule_run_orig_cmdpref \
+        # end
+    l_vcsh_submodule_run_orig_cmdprg="${GIT_EXEC_PATH_DEFDIR}/git-submodule"
+
+    while [ $# -gt 0 ] ; do
+        case "$1" in
+            --exec ) l_vcsh_submodule_run_orig_cmdpref='exec' ;;
+            -- ) shift && break ;;
+            * ) break ;;
+        esac
+        shift
+    done
+
+    # prev: v1: f_vcsh_submodule_debug "about to run original git submodule program: '${l_vcsh_submodule_run_orig_cmdprg} $*'"
+    f_vcsh_submodule_debug "about to run original git submodule program"
+    f_vcsh_submodule_run ${l_vcsh_submodule_run_orig_cmdpref} "${l_vcsh_submodule_run_orig_cmdprg}" "$@"
+}
+
+: "${VCSH_MODULES_DEBUG:=${GIT_SUBMODULE_DEBUG:-0}}"
+if [ "${VCSH_MODULES_DEBUG}" -ne 0 ] ; then
+    f_vcsh_submodule_debug "entered. cwd='${PWD}'. env variables:"
+    {
+        # prev: v1: echo "$0: DEBUG: entered. cwd='${PWD}'. env variables:"
+        set | grep -Ee '^(VCSH|GIT)'
+    } 1>&2
+fi
+# }}}
+
+if ! [ -n "${VCSH_REPO_NAME}" ] ; then
+    f_vcsh_submodule_debug "no value for VCSH_REPO_NAME: running the original git submodule program"
+    # not inside 'vcsh(1)': forward to original
+    f_vcsh_submodule_run_gitsubm_orig --exec "$@"
+    f_vcsh_submodule_abort "internal error: should never reach this line"
+fi
+
+#-? [ -n "${VCSH_BASE}" ] \
+#-?     || f_vcsh_submodule_abort "variable VCSH_BASE empty or invalid"
+[ -n "${VCSH_MODULES_PATH}" ] \
+    || f_vcsh_submodule_abort "variable VCSH_MODULES_PATH empty or invalid"
+
+# FIXME: have all the '.gitmodules*' paths (conditionally?) based on $VCSH_BASE
+# ref: git rev-parse --show-toplevel
+g_topleveldir=`git rev-parse --show-toplevel` \
+    || f_vcsh_submodule_abort "could not get the toplevel directory from git"
+
+[ -z "${VCSH_BASE}" -o "${VCSH_BASE}" = "${g_topleveldir}" ] \
+    || f_vcsh_submodule_abort "VCSH_BASE ('${VCSH_BASE}') does not match the toplevel dir retrieved from git ('${g_topleveldir}')"
+[ -d "${g_topleveldir}/" -a -w "${g_topleveldir}" ] \
+    || f_vcsh_submodule_abort "toplevel directory ('${g_topleveldir}') is not a writable directory"
+
+g_gitmodules_pathname="${g_topleveldir}/.gitmodules"
+f_vcsh_submodule_debug "git toplevel dir: '${g_topleveldir}'"
+
+# TODO: make error handling and/or cleanup more elegant (use 'trap(1)')
+if [ -e "${g_gitmodules_pathname}" ]; then
+    f_vcsh_submodule_abort 2 "${g_gitmodules_pathname} exists"
 else
+    # TODO: MAYBE: only 'cd' to the toplevel dir if we are not inside the tree already.
+    f_vcsh_submodule_run cd "${g_topleveldir}" \
+        || f_vcsh_submodule_abort "could not cd into the git toplevel dir ('${g_topleveldir}')"
     GIT_EXEC_PATH="${GIT_EXEC_PATH_ORIG}"
     mpath="${VCSH_MODULES_PATH}/${VCSH_REPO_NAME}"
-    [ -r "${mpath}" ] || touch "${mpath}"
-    ln "${mpath}" ".gitmodules" || exit 2
-    "${GIT_EXEC_PATH_ORIG}/git-submodule" "$@"
-    if git ls-files --error-unmatch .gitmodules >/dev/null 2>&1; then
-	git rm --force --quiet .gitmodules
-	git add --force "${mpath}"
+
+    # orig: [ -r "${mpath}" ] || touch "${mpath}"
+    if [ -r "${mpath}" ] ; then
+        t_mpath_created=0
     else
-	rm .gitmodules
+        f_vcsh_submodule_run touch "${mpath}" \
+            || f_vcsh_submodule_abort 2 "failed to create ${mpath}"
+        t_mpath_created=1
     fi
+    f_vcsh_submodule_run ln "${mpath}" "${g_gitmodules_pathname}" || exit 2
+
+    # prev: v2: "${GIT_EXEC_PATH_DEFDIR}/git-submodule" "$@"
+    f_vcsh_submodule_run_gitsubm_orig "$@"
+    rc=$?
+    if git ls-files --error-unmatch "${g_gitmodules_pathname}" >/dev/null 2>&1; then
+        f_vcsh_submodule_run git rm --force --quiet "${g_gitmodules_pathname}" \
+            && f_vcsh_submodule_run git add --force "${mpath}" \
+            || rc=$?
+    else
+        f_vcsh_submodule_run rm "${g_gitmodules_pathname}" || rc=$?
+        # if we created the file above, and it remains a zero-byte file, we remove it.
+        if [ ${t_mpath_created} -ne 0 -a -e "${mpath}" -a '(' ! -s "${mpath}" ')' ] ; then
+            f_vcsh_submodule_debug "repo-specific '${mpath}' file has been left unmodified and empty, and no persistent operations have been recorded. removing zero-byte file."
+            f_vcsh_submodule_run rm "${mpath}" || rc=$?
+        fi
+    fi
+
+    f_vcsh_submodule_debug "exiting with rc=$rc"
+    exit $rc
 fi
 
 # vim600: set filetype=sh fileformat=unix softtabstop=4:

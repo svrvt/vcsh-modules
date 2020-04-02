@@ -1,15 +1,74 @@
-#!/bin/bash
+
+f_vcsh_gitmodules_is_vcsh_gm_sourcedir()
+{
+    l_vcsh_isgmsd_pathbasedir="$1" \
+        && shift \
+        && [ -n "${l_vcsh_isgmsd_pathbasedir}" ] \
+        || return 1
+
+    for l_vcsh_isgmsd_pathpost in \
+        config \
+        git-submodule \
+        # end
+    do
+        [ -n "${l_vcsh_isgmsd_pathpost}" ] || continue
+        l_vcsh_isgmsd_pathchk="${l_vcsh_isgmsd_pathbasedir}/${l_vcsh_isgmsd_pathpost}" \
+            && [ -n "${l_vcsh_isgmsd_pathchk}" -a -e "${l_vcsh_isgmsd_pathchk}" ] \
+            || return 1
+    done
+    return 0
+}
 
 if [ ! -f .gitmodules ]; then
-    EXEC_PATH="$(git --exec-path)"
-    export GIT_EXEC_PATH_ORIG="${EXEC_PATH##*:}"
-    NEWPATH="$XDG_CONFIG_HOME/vcsh/gitmodules"
-    case "$EXEC_PATH" in
-	*"${NEWPATH}:"*);;
-	*) export GIT_EXEC_PATH="$NEWPATH:$EXEC_PATH";;
+    EXEC_PATH="`git --exec-path`" \
+        && [ -n "${EXEC_PATH}" ] \
+        || return 1
+    GIT_EXEC_PATH_ORIG="${EXEC_PATH}" \
+        && [ -n "${GIT_EXEC_PATH_ORIG}" ] \
+        && export GIT_EXEC_PATH_ORIG \
+        || return 1
+    GIT_EXEC_PATH_DEFDIR="${GIT_EXEC_PATH_ORIG##*:}" \
+        && [ -n "${GIT_EXEC_PATH_DEFDIR}" -a -d "${GIT_EXEC_PATH_DEFDIR}/" ] \
+        && [ -x "${GIT_EXEC_PATH_DEFDIR}/git-submodule" ] \
+        && export GIT_EXEC_PATH_DEFDIR \
+        || return 1
+
+    if [ -z "${VCSH_MODULES_SOURCEPATH}" ] ; then
+        for t_dirname in \
+            # end
+        do
+            [ -n "${t_dirname}" ] \
+                && f_vcsh_gitmodules_is_vcsh_gm_sourcedir "${t_dirname}" \
+                || continue
+
+            VCSH_MODULES_SOURCEPATH="${t_dirname}"
+        done
+        unset t_dirname
+    else
+        f_vcsh_gitmodules_is_vcsh_gm_sourcedir "${VCSH_MODULES_SOURCEPATH}" \
+            || return 1
+    fi
+    [ -n "${VCSH_MODULES_SOURCEPATH}" ] \
+        && export VCSH_MODULES_SOURCEPATH \
+        || return 1
+
+    case ":{begin}:${EXEC_PATH}:{end}:" in
+        # matches anywhere: "*:${VCSH_MODULES_SOURCEPATH}:*" )
+        # matches only when it's the first:
+        ":{begin}:${VCSH_MODULES_SOURCEPATH}:*" )
+            : ;;
+        * )
+            GIT_EXEC_PATH="${VCSH_MODULES_SOURCEPATH}:${EXEC_PATH}"
+            export GIT_EXEC_PATH
+            ;;
     esac
-    export VCSH_MODULES_PATH="${VCSH_MODULES_PATH:-"${VCSH_BASE:-$HOME}/.gitmodules.d"}"
-    [ -d "${VCSH_MODULES_PATH}" ] || mkdir -p "${VCSH_MODULES_PATH}"
+
+    VCSH_MODULES_PATH="${VCSH_MODULES_PATH:-${VCSH_BASE:-$HOME}/.gitmodules.d}" \
+        && [ -n "${VCSH_MODULES_PATH}" ] \
+        && export VCSH_MODULES_PATH \
+        || return 1
+    [ -d "${VCSH_MODULES_PATH}/" ] || mkdir -p "${VCSH_MODULES_PATH}" \
+        || return 1
 fi
 
 # vim600: set filetype=sh fileformat=unix softtabstop=4:
