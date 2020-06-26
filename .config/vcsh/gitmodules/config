@@ -1,3 +1,4 @@
+# MAYBE: (from merged upstream/master) # NOTE: this file is sourced, not executed: #!/usr/bin/env bash
 
 f_vcsh_gitmodules_is_vcsh_gm_sourcedir()
 {

@@ -1,4 +1,5 @@
 #!/bin/sh
+# MAYBE: (from merged upstream/master) #!/usr/bin/env bash
 
 # TODO: DEBUG: remove once done {{{
 f_vcsh_submodule_echo_to_stderr()
