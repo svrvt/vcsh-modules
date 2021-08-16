@@ -30,7 +30,7 @@ if [ ! -f .gitmodules ]; then
         && export GIT_EXEC_PATH_ORIG \
         || return 1
 
-    GIT_EXEC_PATH_DEFDIR="${GIT_EXEC_PATH_ORIG##*:}" \
+    : "${GIT_EXEC_PATH_DEFDIR:=${GIT_EXEC_PATH_ORIG##*:}}" \
         && [ -n "${GIT_EXEC_PATH_DEFDIR}" -a -d "${GIT_EXEC_PATH_DEFDIR}/" ] \
         && [ -x "${GIT_EXEC_PATH_DEFDIR}/git-submodule" ] \
         && export GIT_EXEC_PATH_DEFDIR \
