@@ -2,7 +2,7 @@
 
 : ${XDG_CONFIG_HOME:="$HOME/.config"}
 
-source "$XDG_CONFIG_HOME/vcsh/gitmodules/config"
+. "$XDG_CONFIG_HOME/vcsh/gitmodules/config"
 
 # vim600: set filetype=sh fileformat=unix softtabstop=4:
 # vim: set expandtab smarttab:
