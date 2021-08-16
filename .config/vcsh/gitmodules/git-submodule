@@ -16,3 +16,7 @@ else
 	rm .gitmodules
     fi
 fi
+
+# vim600: set filetype=sh fileformat=unix softtabstop=4:
+# vim: set expandtab smarttab:
+# vi: set autoindent shiftwidth=4:
