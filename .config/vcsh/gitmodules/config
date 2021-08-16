@@ -36,6 +36,8 @@ if [ ! -f .gitmodules ]; then
 
     if [ -z "${VCSH_MODULES_SOURCEPATH}" ] ; then
         for t_dirname in \
+            ${XDG_CONFIG_HOME:+"${XDG_CONFIG_HOME}/vcsh/gitmodules"} \
+            ${VCSH_BASE:+"${VCSH_BASE}/.config/vcsh/gitmodules"} \
             # end
         do
             [ -n "${t_dirname}" ] \
