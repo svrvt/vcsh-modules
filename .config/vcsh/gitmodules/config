@@ -50,6 +50,7 @@ if [ ! -f .gitmodules ]; then
                 || continue
 
             VCSH_MODULES_SOURCEPATH="${t_dirname}"
+            break
         done
         unset t_dirname
     else
