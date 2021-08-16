@@ -1,4 +1,4 @@
-#!/bin/bash
+# NOTE: this file is sourced, not executed: #!/usr/bin/env bash
 
 : ${XDG_CONFIG_HOME:="$HOME/.config"}
 
