@@ -7,6 +7,12 @@ f_vcsh_submodule_echo_to_stderr()
     echo "${0##*/}:" "$@" 1>&2
 }
 
+f_vcsh_submodule_error()
+{
+    f_vcsh_submodule_echo_to_stderr "ERROR:" "$@"
+    return 1
+}
+
 # TODO: document
 f_vcsh_submodule_abort()
 {
@@ -16,7 +22,8 @@ f_vcsh_submodule_abort()
         [0-9]* ) l_vcsh_submodule_abort_rc=$1 && shift ;;
     esac
 
-    f_vcsh_submodule_echo_to_stderr "ERROR:" "$@"
+    #+ prev: v1: f_vcsh_submodule_echo_to_stderr "ERROR:" "$@"
+    f_vcsh_submodule_error "$@" || :
     exit ${l_vcsh_submodule_abort_rc}
 }
 
