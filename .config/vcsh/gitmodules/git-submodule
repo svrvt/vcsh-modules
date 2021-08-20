@@ -55,7 +55,6 @@ f_vcsh_submodule_run_gitsubm_orig()
     unset \
         l_vcsh_submodule_run_orig_cmdpref \
         # end
-    l_vcsh_submodule_run_orig_cmdprg="${GIT_EXEC_PATH_DEFDIR}/git-submodule"
 
     while [ $# -gt 0 ] ; do
         case "$1" in
@@ -65,6 +64,12 @@ f_vcsh_submodule_run_gitsubm_orig()
         esac
         shift
     done
+
+    l_vcsh_submodule_run_orig_cmdprg="${GIT_EXEC_PATH_DEFDIR}/git-submodule"
+    [ -n "${GIT_EXEC_PATH_DEFDIR}" ] \
+        || f_vcsh_submodule_error "internal error: the variable GIT_EXEC_PATH_DEFDIR needs to be set in order to run the original '${l_vcsh_submodule_run_orig_cmdprg##*/}' program." \
+        || { [ -n "${l_vcsh_submodule_run_orig_cmdpref}" ] && exit 1 ; } \
+        || return $?
 
     # prev: v1: f_vcsh_submodule_debug "about to run original git submodule program: '${l_vcsh_submodule_run_orig_cmdprg} $*'"
     f_vcsh_submodule_debug "about to run original git submodule program"
@@ -93,12 +98,90 @@ f_vcsh_submodule_debug "entered. cwd='${PWD}'."
 f_vcsh_submodule_debug_showenvvars
 # }}}
 
-if ! [ -n "${VCSH_REPO_NAME}" ] ; then
+# TODO: improve detection of cases on which to run the original module:
+#  NOTE: a vcsh shell (say, 'vcsh enter {repo}'), but the command is being run
+#  in a directory that has its own git repository (git(1) wants to work on a
+#  different repository than the one the vcsh command "entered"/set up)
+if [ -z "${VCSH_REPO_NAME}" ] ; then
     f_vcsh_submodule_debug "no value for VCSH_REPO_NAME: running the original git submodule program"
+
+    if [ -z "${GIT_EXEC_PATH_DEFDIR}" ] ; then
+        f_vcsh_submodule_debug "weird setup detected. attempting to calculate GIT_EXEC_PATH_DEFDIR."
+        if [ -z "${GIT_EXEC_PATH_DEFDIR}" ] && [ -n "${GIT_EXEC_PATH}" ] ; then
+            t_list="{begin}:${GIT_EXEC_PATH}:{end}"
+            t_execpath="${t_list#*:${0%/*}:}"
+            [ "${t_execpath}" != "${t_list}" ] \
+                && t_execpath="${t_execpath%:{*}" \
+                && [ -n "${t_execpath}" ] \
+                && GIT_EXEC_PATH_DEFDIR="${t_execpath}" \
+                && export GIT_EXEC_PATH_DEFDIR \
+                || :
+        fi
+    fi
+
     # not inside 'vcsh(1)': forward to original
     f_vcsh_submodule_run_gitsubm_orig --exec "$@"
     f_vcsh_submodule_abort "internal error: should never reach this line"
 fi
+
+# start of custom processing
+f_vcsh_submodule_debug "[main] starting custom submodule command processing"
+
+if [ -n "${VCSH_MODULES_SOURCEPATH}" ] ; then
+    t_f="${VCSH_MODULES_SOURCEPATH}/vcsh-modules_git-submodule-common.sh"
+    [ -n "${t_f}" ] \
+        && [ -f "${t_f}" -a -r "${t_f}" ] \
+        || f_vcsh_submodule_abort "could not find the shared shell code file '${t_f}'."
+    . "${t_f}" \
+        || f_vcsh_submodule_abort "error sourcing file '${t_f}'."
+fi
+
+# git_work_tree {{{
+unset git_work_tree
+
+if f_vcsh_submodule_debug_enabled ; then
+    #+ prev: v1: set | grep -Ee '^(GIT_|VCSH)' 1>&2
+    f_vcsh_submodule_debug_showenvvars
+    f_vcsh_submodule_debug "PWD='$PWD'" 1>&2
+    f_vcsh_submodule_debug "git config core.excludesfile: `git config core.excludesfile`" 1>&2
+    f_vcsh_submodule_debug "git rev-parse --git-dir: `git rev-parse --git-dir`" 1>&2
+fi
+if [ -z "${git_work_tree}" ] ; then
+    # ref: https://stackoverflow.com/questions/12293944/how-to-find-the-path-of-the-local-git-repository-when-i-am-possibly-in-a-subdire/12293994#12293994
+    #  ref: (permalink) https://stackoverflow.com/a/12293994/2733708
+    f_vcsh_gitmodules_run_git --capture-stdout rev-parse --show-toplevel \
+        && git_work_tree="${g_gitcmd_out_stdout}" \
+        # end
+    f_vcsh_submodule_debug "git_work_tree (rev-parse --show-toplevel): '${git_work_tree}'" 1>&2
+fi
+if [ -z "${git_work_tree}" ] ; then
+    f_vcsh_gitmodules_run_git --capture-stdout config core.worktree \
+        && git_work_tree="${g_gitcmd_out_stdout}" \
+        # end
+    f_vcsh_submodule_debug "git_work_tree (core.worktree): '${git_work_tree}'" 1>&2
+fi
+# vcsh-specific "reasonable" defaults
+if [ -z "${git_work_tree}" ] ; then
+    git_work_tree="${VCSH_BASE:-$HOME}"
+    f_vcsh_submodule_debug "git_work_tree (VCSH_BASE, HOME): '${git_work_tree}'" 1>&2
+fi
+
+# as per https://git-scm.com/book/en/v2/Git-Internals-Environment-Variables
+[ -n "${git_work_tree}" ] || git_work_tree="$PWD"
+
+# post-value setting validations
+[ -n "${git_work_tree}" ] \
+    && [ -d "${git_work_tree}/" ] \
+    || return 1
+f_vcsh_submodule_debug "git_work_tree (final): '${git_work_tree}'" 1>&2
+# }}}
+
+VCSH_MODULES_PATH="${VCSH_MODULES_PATH:-${git_work_tree}/.gitmodules.d}" \
+    && [ -n "${VCSH_MODULES_PATH}" ] \
+    && export VCSH_MODULES_PATH \
+    || return 1
+[ -d "${VCSH_MODULES_PATH}/" ] || mkdir -p "${VCSH_MODULES_PATH}" \
+    || return 1
 
 #-? [ -n "${VCSH_BASE}" ] \
 #-?     || f_vcsh_submodule_abort "variable VCSH_BASE empty or invalid"
