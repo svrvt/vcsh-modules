@@ -163,15 +163,11 @@ fi
 f_vcsh_submodule_debug "git_work_tree (final): '${git_work_tree}'" 1>&2
 # }}}
 
-VCSH_MODULES_PATH="${VCSH_MODULES_PATH:-${git_work_tree}/.gitmodules.d}" \
-    && [ -n "${VCSH_MODULES_PATH}" ] \
-    && export VCSH_MODULES_PATH \
+g_gitmodules_d_pathname="${g_gitmodules_d_pathname:-${git_work_tree}/.gitmodules.d}" \
+    && [ -n "${g_gitmodules_d_pathname}" ] \
     || return 1
-[ -d "${VCSH_MODULES_PATH}/" ] || mkdir -p "${VCSH_MODULES_PATH}" \
+[ -d "${g_gitmodules_d_pathname}/" ] || mkdir -p "${g_gitmodules_d_pathname}/" \
     || return 1
-
-[ -n "${VCSH_MODULES_PATH}" ] \
-    || f_vcsh_submodule_abort "variable VCSH_MODULES_PATH empty or invalid"
 
 g_topleveldir=`git rev-parse --show-toplevel` \
     || f_vcsh_submodule_abort "could not get the toplevel directory from git"
@@ -192,7 +188,7 @@ else
     f_vcsh_submodule_run cd "${g_topleveldir}" \
         || f_vcsh_submodule_abort "could not cd into the git toplevel dir ('${g_topleveldir}')"
     GIT_EXEC_PATH="${GIT_EXEC_PATH_ORIG}"
-    mpath="${VCSH_MODULES_PATH}/${VCSH_REPO_NAME}"
+    mpath="${g_gitmodules_d_pathname}/${VCSH_REPO_NAME}"
 
     # orig: [ -r "${mpath}" ] || touch "${mpath}"
     if [ -r "${mpath}" ] ; then
