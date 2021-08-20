@@ -27,9 +27,16 @@ f_vcsh_submodule_abort()
     exit ${l_vcsh_submodule_abort_rc}
 }
 
+: "${VCSH_MODULES_DEBUG:=${GIT_SUBMODULE_DEBUG:-0}}"
+
+f_vcsh_submodule_debug_enabled()
+{
+    [ ${VCSH_MODULES_DEBUG} -ne 0 ]
+}
+
 f_vcsh_submodule_debug()
 {
-    [ ${VCSH_MODULES_DEBUG} -ne 0 ] || return 0
+    f_vcsh_submodule_debug_enabled || return 0
     f_vcsh_submodule_echo_to_stderr "[debug]" "$@"
 }
 
@@ -64,7 +71,6 @@ f_vcsh_submodule_run_gitsubm_orig()
     f_vcsh_submodule_run ${l_vcsh_submodule_run_orig_cmdpref} "${l_vcsh_submodule_run_orig_cmdprg}" "$@"
 }
 
-: "${VCSH_MODULES_DEBUG:=${GIT_SUBMODULE_DEBUG:-0}}"
 if [ "${VCSH_MODULES_DEBUG}" -ne 0 ] ; then
     f_vcsh_submodule_debug "entered. cwd='${PWD}'. env variables:"
     {
