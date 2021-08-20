@@ -1,7 +1,6 @@
 #!/bin/sh
 # MAYBE: (from merged upstream/master) #!/usr/bin/env bash
 
-# TODO: DEBUG: remove once done {{{
 f_vcsh_submodule_echo_to_stderr()
 {
     echo "${0##*/}:" "$@" 1>&2
@@ -22,7 +21,6 @@ f_vcsh_submodule_abort()
         [0-9]* ) l_vcsh_submodule_abort_rc=$1 && shift ;;
     esac
 
-    #+ prev: v1: f_vcsh_submodule_echo_to_stderr "ERROR:" "$@"
     f_vcsh_submodule_error "$@" || :
     exit ${l_vcsh_submodule_abort_rc}
 }
@@ -71,7 +69,6 @@ f_vcsh_submodule_run_gitsubm_orig()
         || { [ -n "${l_vcsh_submodule_run_orig_cmdpref}" ] && exit 1 ; } \
         || return $?
 
-    # prev: v1: f_vcsh_submodule_debug "about to run original git submodule program: '${l_vcsh_submodule_run_orig_cmdprg} $*'"
     f_vcsh_submodule_debug "about to run original git submodule program"
     f_vcsh_submodule_run ${l_vcsh_submodule_run_orig_cmdpref} "${l_vcsh_submodule_run_orig_cmdprg}" "$@"
 }
@@ -81,22 +78,13 @@ f_vcsh_submodule_debug_showenvvars()
     f_vcsh_submodule_debug_enabled || return 0
     {
         f_vcsh_submodule_debug "selected env variables:"
-        # prev: v1: echo "$0: DEBUG: entered. cwd='${PWD}'. env variables:"
         set | grep -Ee '^(VCSH|GIT)'
     } 1>&2
 }
 
 f_vcsh_submodule_debug "entered. cwd='${PWD}'."
 
-#+ prev: v1: if f_vcsh_submodule_debug_enabled ; then
-#+ prev: v1:     f_vcsh_submodule_debug "entered. cwd='${PWD}'. env variables:"
-#+ prev: v1:     {
-#+ prev: v1:         # prev: v1: echo "$0: DEBUG: entered. cwd='${PWD}'. env variables:"
-#+ prev: v1:         set | grep -Ee '^(VCSH|GIT)'
-#+ prev: v1:     } 1>&2
-#+ prev: v1: fi
 f_vcsh_submodule_debug_showenvvars
-# }}}
 
 # TODO: improve detection of cases on which to run the original module:
 #  NOTE: a vcsh shell (say, 'vcsh enter {repo}'), but the command is being run
@@ -140,7 +128,6 @@ fi
 unset git_work_tree
 
 if f_vcsh_submodule_debug_enabled ; then
-    #+ prev: v1: set | grep -Ee '^(GIT_|VCSH)' 1>&2
     f_vcsh_submodule_debug_showenvvars
     f_vcsh_submodule_debug "PWD='$PWD'" 1>&2
     f_vcsh_submodule_debug "git config core.excludesfile: `git config core.excludesfile`" 1>&2
@@ -183,13 +170,9 @@ VCSH_MODULES_PATH="${VCSH_MODULES_PATH:-${git_work_tree}/.gitmodules.d}" \
 [ -d "${VCSH_MODULES_PATH}/" ] || mkdir -p "${VCSH_MODULES_PATH}" \
     || return 1
 
-#-? [ -n "${VCSH_BASE}" ] \
-#-?     || f_vcsh_submodule_abort "variable VCSH_BASE empty or invalid"
 [ -n "${VCSH_MODULES_PATH}" ] \
     || f_vcsh_submodule_abort "variable VCSH_MODULES_PATH empty or invalid"
 
-# FIXME: have all the '.gitmodules*' paths (conditionally?) based on $VCSH_BASE
-# ref: git rev-parse --show-toplevel
 g_topleveldir=`git rev-parse --show-toplevel` \
     || f_vcsh_submodule_abort "could not get the toplevel directory from git"
 
@@ -221,7 +204,6 @@ else
     fi
     f_vcsh_submodule_run ln "${mpath}" "${g_gitmodules_pathname}" || exit 2
 
-    # prev: v2: "${GIT_EXEC_PATH_DEFDIR}/git-submodule" "$@"
     f_vcsh_submodule_run_gitsubm_orig "$@"
     rc=$?
     if git ls-files --error-unmatch "${g_gitmodules_pathname}" >/dev/null 2>&1; then
