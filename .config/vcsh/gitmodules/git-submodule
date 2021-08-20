@@ -159,15 +159,15 @@ fi
 # post-value setting validations
 [ -n "${g_git_worktree_pathname}" ] \
     && [ -d "${g_git_worktree_pathname}/" ] \
-    || return 1
+    || f_vcsh_submodule_abort "could not get the toplevel directory from git or from any other tool/mechanism"
 f_vcsh_submodule_debug "g_git_worktree_pathname (final): '${g_git_worktree_pathname}'" 1>&2
 # }}}
 
 g_gitmodules_d_pathname="${g_gitmodules_d_pathname:-${g_git_worktree_pathname}/.gitmodules.d}" \
     && [ -n "${g_gitmodules_d_pathname}" ] \
-    || return 1
+    || f_vcsh_submodule_abort "internal error: could not compute a value for variable g_gitmodules_d_pathname"
 [ -d "${g_gitmodules_d_pathname}/" ] || mkdir -p "${g_gitmodules_d_pathname}/" \
-    || return 1
+    || f_vcsh_submodule_abort "could not ensure that the directory '${g_gitmodules_d_pathname}' exists (or be created)"
 
 g_topleveldir=`git rev-parse --show-toplevel` \
     || f_vcsh_submodule_abort "could not get the toplevel directory from git"
