@@ -129,9 +129,9 @@ unset g_git_worktree_pathname
 
 if f_vcsh_submodule_debug_enabled ; then
     f_vcsh_submodule_debug_showenvvars
-    f_vcsh_submodule_debug "PWD='$PWD'" 1>&2
-    f_vcsh_submodule_debug "git config core.excludesfile: `git config core.excludesfile`" 1>&2
-    f_vcsh_submodule_debug "git rev-parse --git-dir: `git rev-parse --git-dir`" 1>&2
+    f_vcsh_submodule_debug "PWD='$PWD'"
+    f_vcsh_submodule_debug "git config core.excludesfile: `git config core.excludesfile`"
+    f_vcsh_submodule_debug "git rev-parse --git-dir: `git rev-parse --git-dir`"
 fi
 if [ -z "${g_git_worktree_pathname}" ] ; then
     # ref: https://stackoverflow.com/questions/12293944/how-to-find-the-path-of-the-local-git-repository-when-i-am-possibly-in-a-subdire/12293994#12293994
@@ -139,18 +139,18 @@ if [ -z "${g_git_worktree_pathname}" ] ; then
     f_vcsh_gitmodules_run_git --capture-stdout rev-parse --show-toplevel \
         && g_git_worktree_pathname="${g_gitcmd_out_stdout}" \
         # end
-    f_vcsh_submodule_debug "g_git_worktree_pathname (rev-parse --show-toplevel): '${g_git_worktree_pathname}'" 1>&2
+    f_vcsh_submodule_debug "g_git_worktree_pathname (rev-parse --show-toplevel): '${g_git_worktree_pathname}'"
 fi
 if [ -z "${g_git_worktree_pathname}" ] ; then
     f_vcsh_gitmodules_run_git --capture-stdout config core.worktree \
         && g_git_worktree_pathname="${g_gitcmd_out_stdout}" \
         # end
-    f_vcsh_submodule_debug "g_git_worktree_pathname (core.worktree): '${g_git_worktree_pathname}'" 1>&2
+    f_vcsh_submodule_debug "g_git_worktree_pathname (core.worktree): '${g_git_worktree_pathname}'"
 fi
 # vcsh-specific "reasonable" defaults
 if [ -z "${g_git_worktree_pathname}" ] ; then
     g_git_worktree_pathname="${VCSH_BASE:-$HOME}"
-    f_vcsh_submodule_debug "g_git_worktree_pathname (VCSH_BASE, HOME): '${g_git_worktree_pathname}'" 1>&2
+    f_vcsh_submodule_debug "g_git_worktree_pathname (VCSH_BASE, HOME): '${g_git_worktree_pathname}'"
 fi
 
 # as per https://git-scm.com/book/en/v2/Git-Internals-Environment-Variables
@@ -160,7 +160,7 @@ fi
 [ -n "${g_git_worktree_pathname}" ] \
     && [ -d "${g_git_worktree_pathname}/" ] \
     || f_vcsh_submodule_abort "could not get the toplevel directory from git or from any other tool/mechanism"
-f_vcsh_submodule_debug "g_git_worktree_pathname (final): '${g_git_worktree_pathname}'" 1>&2
+f_vcsh_submodule_debug "g_git_worktree_pathname (final): '${g_git_worktree_pathname}'"
 # }}}
 
 g_gitmodules_d_pathname="${g_gitmodules_d_pathname:-${g_git_worktree_pathname}/.gitmodules.d}" \
