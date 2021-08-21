@@ -158,35 +158,58 @@ fi
 
 # post-value setting validations
 [ -n "${g_git_worktree_pathname}" ] \
-    && [ -d "${g_git_worktree_pathname}/" ] \
     || f_vcsh_submodule_abort "could not get the toplevel directory from git or from any other tool/mechanism"
-f_vcsh_submodule_debug "g_git_worktree_pathname (final): '${g_git_worktree_pathname}'"
+
+[ -d "${g_git_worktree_pathname}/" -a -w "${g_git_worktree_pathname}/" ] \
+    || f_vcsh_submodule_abort "toplevel directory ('${g_git_worktree_pathname}') is not a writable directory"
+
+# TODO: check if this validation makes sense, or what is this validation trying to guard against.
+[ -z "${VCSH_BASE}" -o "${VCSH_BASE}" = "${g_git_worktree_pathname}" ] \
+    || f_vcsh_submodule_abort "VCSH_BASE ('${VCSH_BASE}') does not match the toplevel dir retrieved from git ('${g_git_worktree_pathname}')"
+
+f_vcsh_submodule_debug "git toplevel (work) dir: '${g_git_worktree_pathname}'"
 # }}}
 
-g_gitmodules_d_pathname="${g_gitmodules_d_pathname:-${g_git_worktree_pathname}/.gitmodules.d}" \
+unset g_gitmodules_d_pathname
+
+: "${g_gitmodules_d_pathname:=${g_git_worktree_pathname}/.gitmodules.d}" \
     && [ -n "${g_gitmodules_d_pathname}" ] \
-    || f_vcsh_submodule_abort "internal error: could not compute a value for variable g_gitmodules_d_pathname"
-[ -d "${g_gitmodules_d_pathname}/" ] || mkdir -p "${g_gitmodules_d_pathname}/" \
-    || f_vcsh_submodule_abort "could not ensure that the directory '${g_gitmodules_d_pathname}' exists (or be created)"
+    || f_vcsh_submodule_abort "internal error: could not compute or retrieve/calculate a value for variable g_gitmodules_d_pathname"
 
-g_topleveldir=`git rev-parse --show-toplevel` \
-    || f_vcsh_submodule_abort "could not get the toplevel directory from git"
+# NOTE: this is hard-coded in '${GIT_EXEC_PATH_DEFDIR}/git-submodule' (or a
+# file "sourced" from there).
+g_gitmodules_pathname="${g_git_worktree_pathname}/.gitmodules"
 
-[ -z "${VCSH_BASE}" -o "${VCSH_BASE}" = "${g_topleveldir}" ] \
-    || f_vcsh_submodule_abort "VCSH_BASE ('${VCSH_BASE}') does not match the toplevel dir retrieved from git ('${g_topleveldir}')"
-[ -d "${g_topleveldir}/" -a -w "${g_topleveldir}" ] \
-    || f_vcsh_submodule_abort "toplevel directory ('${g_topleveldir}') is not a writable directory"
+[ -n "${g_gitmodules_pathname}" ] \
+    && [ "$g_gitmodules_pathname}" != "${g_gitmodules_d_pathname}" ] \
+    || f_vcsh_submodule_abort "pathname for the git standard 'git-submodule' file ('${g_gitmodules_pathname}') matches the pathname calculated/retrieved for storing the gitmodules repo-specific file."
 
-g_gitmodules_pathname="${g_topleveldir}/.gitmodules"
-f_vcsh_submodule_debug "git toplevel dir: '${g_topleveldir}'"
+! [ -e "${g_gitmodules_d_pathname}" ] \
+    || [ -d "${g_gitmodules_d_pathname}/" ] \
+    || f_vcsh_submodule_abort "gitmodules directory for repo-specific files ('${g_gitmodules_d_pathname}') already exists, and is not (nor links to) a directory"
+
+! [ -e "${g_gitmodules_d_pathname}" ] \
+    || [ -w "${g_gitmodules_d_pathname}/" ] \
+    || f_vcsh_submodule_abort "gitmodules directory for repo-specific files ('${g_gitmodules_d_pathname}') is not a writable directory"
+
+# filesystem modifications start here
+
+[ -d "${g_gitmodules_d_pathname}/" ] \
+    || {
+            mkdir -p "${g_gitmodules_d_pathname}/" \
+                && [ -w "${g_gitmodules_d_pathname}/" ] \
+    ; } \
+    || f_vcsh_submodule_abort "could not ensure that the writable directory '${g_gitmodules_d_pathname}' exists (or be created)"
 
 # TODO: make error handling and/or cleanup more elegant (use 'trap(1)')
 if [ -e "${g_gitmodules_pathname}" ]; then
     f_vcsh_submodule_abort 2 "${g_gitmodules_pathname} exists"
 else
-    # TODO: MAYBE: only 'cd' to the toplevel dir if we are not inside the tree already.
-    f_vcsh_submodule_run cd "${g_topleveldir}" \
-        || f_vcsh_submodule_abort "could not cd into the git toplevel dir ('${g_topleveldir}')"
+    # NOTE: the original 'git-submodule' program (currently) calls
+    # 'cd_to_toplevel', which ensures that the cwd is indeed
+    # '${g_git_worktree_pathname}'.
+    f_vcsh_submodule_run cd "${g_git_worktree_pathname}" \
+        || f_vcsh_submodule_abort "could not cd into the git toplevel dir ('${g_git_worktree_pathname}')"
     GIT_EXEC_PATH="${GIT_EXEC_PATH_ORIG}"
     mpath="${g_gitmodules_d_pathname}/${VCSH_REPO_NAME}"
 
