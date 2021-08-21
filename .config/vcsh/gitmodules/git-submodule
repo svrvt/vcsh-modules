@@ -222,7 +222,8 @@ else
             || f_vcsh_submodule_abort 2 "failed to create ${mpath}"
         t_mpath_created=1
     fi
-    f_vcsh_submodule_run ln "${mpath}" "${g_gitmodules_pathname}" || exit 2
+    f_vcsh_submodule_run ln "${mpath}" "${g_gitmodules_pathname}" \
+        || f_vcsh_submodule_abort 2 "failed to 'ln': '${mpath}' -> '${g_gitmodules_pathname}'"
 
     f_vcsh_submodule_run_gitsubm_orig "$@"
     rc=$?
