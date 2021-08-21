@@ -112,6 +112,87 @@ if [ -z "${VCSH_REPO_NAME}" ] ; then
     f_vcsh_submodule_abort "internal error: should never reach this line"
 fi
 
+# temporary files handling {{{
+
+f_vcsh_submodule_tmpfiles_cleanup_varsonly()
+{
+    unset \
+        g_tmpfile_lastcreated_fname \
+        g_tmpfile_gitmodules_orig \
+        # end
+}
+
+f_vcsh_submodule_tmpfiles_cleanup_varsonly \
+    || f_vcsh_submodule_abort "failed to (un)initialise environment variables for temporary files handling"
+
+f_vcsh_submodule_cleanup()
+{
+    f_vcsh_submodule_debug "f_vcsh_submodule_cleanup(): entered"
+
+    # unnecessary?: # quick code path
+    # unnecessary?: [ -z "${g_tmpfile_lastcreated_fname}" ] \
+    # unnecessary?:     && [ -z "${g_tmpfile_gitmodules_orig}" ] \
+    # unnecessary?:     && f_vcsh_submodule_debug "f_vcsh_submodule_cleanup(): nothing to be done. returning." \
+    # unnecessary?:     && { f_vcsh_submodule_tmpfiles_cleanup_varsonly || return $? ; } \
+    # unnecessary?:     && return 0
+
+    l_vcsh_submodule_cleanup_rc=0
+    for l_vcsh_submodule_cleanup_fname in \
+        "${g_tmpfile_lastcreated_fname}" \
+        "${g_tmpfile_gitmodules_orig}" \
+        # end
+    do
+        [ -n "${l_vcsh_submodule_cleanup_fname}" ] \
+            && [ -f "${l_vcsh_submodule_cleanup_fname}" ] \
+            || continue
+        f_vcsh_submodule_run rm "${l_vcsh_submodule_cleanup_fname}" \
+            || l_vcsh_submodule_cleanup_rc=$?
+    done
+
+    f_vcsh_submodule_tmpfiles_cleanup_varsonly \
+        || l_vcsh_submodule_cleanup_rc=$?
+
+    f_vcsh_submodule_debug "f_vcsh_submodule_cleanup(): finished. returning rc=${l_vcsh_submodule_cleanup_rc}"
+    return ${l_vcsh_submodule_cleanup_rc}
+}
+
+trap f_vcsh_submodule_cleanup EXIT
+
+unset \
+    g_tmpfile_lastcreated_fname \
+    # end
+
+# args: BASENAME_MID_SECTION
+# side effects:
+#  on success, sets g_tmpfile_lastcreated_fname
+f_vcsh_submodule_tmpfile_create()
+{
+    unset \
+        g_tmpfile_lastcreated_fname \
+        # end
+
+    if [ -z "${g_tmpfile_basename_common_pref}" ] ; then
+        g_tmpfile_basename_common_pref="${0##*/}.$$" \
+            && [ -n "${g_tmpfile_basename_common_pref}" ] \
+            || f_vcsh_submodule_abort "internal error: cannot compute value for g_tmpfile_basename_common_pref"
+    fi
+
+    l_vcsh_submodule_tmpfile_create_rc=0
+    g_tmpfile_lastcreated_fname=`f_vcsh_submodule_run mktemp -t "${g_tmpfile_basename_common_pref}.XXXXXXXXXX.tmp"` \
+        && [ -n "${g_tmpfile_lastcreated_fname}" ] \
+        && [ -f "${g_tmpfile_lastcreated_fname}" ] \
+        && [ ! -s "${g_tmpfile_lastcreated_fname}" ] \
+        || l_vcsh_submodule_tmpfile_create_rc=$?
+
+    [ ${l_vcsh_submodule_tmpfile_create_rc} -eq 0 ] \
+        || f_vcsh_submodule_error "tmpfile creation: failed to create tmpfile${g_tmpfile_lastcreated_fname:+ ('${g_tmpfile_lastcreated_fname}')} with args '$*'. error_code=${l_vcsh_submodule_tmpfile_create_rc}" \
+        || unset g_tmpfile_lastcreated_fname
+
+    return ${l_vcsh_submodule_tmpfile_create_rc}
+}
+
+# }}}
+
 # start of custom processing
 f_vcsh_submodule_debug "[main] starting custom submodule command processing"
 
