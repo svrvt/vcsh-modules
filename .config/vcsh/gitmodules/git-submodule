@@ -211,6 +211,7 @@ else
     f_vcsh_submodule_run cd "${g_git_worktree_pathname}" \
         || f_vcsh_submodule_abort "could not cd into the git toplevel dir ('${g_git_worktree_pathname}')"
     GIT_EXEC_PATH="${GIT_EXEC_PATH_ORIG}"
+    # TODO: rename: 'mpath' -> 'g_gitmodules_file_pathname'
     mpath="${g_gitmodules_d_pathname}/${VCSH_REPO_NAME}"
 
     # orig: [ -r "${mpath}" ] || touch "${mpath}"
