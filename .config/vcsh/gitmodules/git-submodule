@@ -306,9 +306,29 @@ else
     f_vcsh_submodule_run ln "${mpath}" "${g_gitmodules_pathname}" \
         || f_vcsh_submodule_abort 2 "failed to 'ln': '${mpath}' -> '${g_gitmodules_pathname}'"
 
+    f_vcsh_submodule_tmpfile_create "gitmodules_orig" \
+        && g_tmpfile_gitmodules_orig="${g_tmpfile_lastcreated_fname}" \
+        || f_vcsh_submodule_abort "could not create temporary file for gitmodules_orig"
+    f_vcsh_submodule_run cp -a "${mpath}" "${g_tmpfile_gitmodules_orig}" \
+        || f_vcsh_submodule_abort "could not copy '${mpath}' -> '${g_tmpfile_gitmodules_orig}'"
+
     f_vcsh_submodule_run_gitsubm_orig "$@"
     rc=$?
     if git ls-files --error-unmatch "${g_gitmodules_pathname}" >/dev/null 2>&1; then
+        # NOTE: even if the pathnames correspond to different inodes, the
+        # comparison enforces the same post-condition: that using either file
+        # contents is equivalent to using the other's, therefore either could
+        # be deleted without risking data loss.
+        if ! f_vcsh_submodule_run cmp -s "${g_gitmodules_pathname}" "${mpath}" ; then
+            f_vcsh_submodule_debug "git standard submodules file '${g_gitmodules_pathname}' differs from the repo-specific one '${mpath}', even though they're supposed to point to the same inode. attempting to handle differently."
+            if [ -n "${g_tmpfile_gitmodules_orig}" ] && f_vcsh_submodule_run cmp -s "${g_tmpfile_gitmodules_orig}" "${mpath}" ; then
+                f_vcsh_submodule_debug " found that the file '${mpath}' has not changed since this git submodule operation, so it should be safe to overwrite it with the git-modified version ('${g_gitmodules_pathname}')"
+                f_vcsh_submodule_run cp -a "${g_gitmodules_pathname}" "${mpath}" \
+                    || f_vcsh_submodule_abort "could not update the repo-specific gitmodules file '${mpath}'"
+            else
+                f_vcsh_submodule_abort "could not find a way to handle this case. leaving files '${g_gitmodules_pathname}' and '${mpath}' as they are"
+            fi
+        fi
         f_vcsh_submodule_run git rm --force --quiet "${g_gitmodules_pathname}" \
             && f_vcsh_submodule_run git add --force "${mpath}" \
             || rc=$?
