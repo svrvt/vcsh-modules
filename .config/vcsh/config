@@ -1,3 +1,14 @@
+# NOTE: this file is sourced, not executed: #!/usr/bin/env bash
+
 : ${XDG_CONFIG_HOME:="$HOME/.config"}
 
-source "$XDG_CONFIG_HOME/vcsh/gitmodules/config"
+. "$XDG_CONFIG_HOME/vcsh/gitmodules/config"
+t_rc=$?
+[ ${t_rc} -eq 0 ] \
+    || echo "[vcsh-modules] sourcing '$XDG_CONFIG_HOME/vcsh/gitmodules/config' failed. return_code=${t_rc}." 1>&2
+# propagate return code
+[ ${t_rc} -eq 0 ]
+
+# vim600: set filetype=sh fileformat=unix softtabstop=4:
+# vim: set expandtab smarttab:
+# vi: set autoindent shiftwidth=4:
