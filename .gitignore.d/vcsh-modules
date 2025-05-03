@@ -3,4 +3,9 @@
 !/.config/vcsh
 !/.config/vcsh/config
 !/.config/vcsh/gitmodules
-!/.config/vcsh/gitmodules/**/*
+!/.config/vcsh/gitmodules/config
+!/.config/vcsh/gitmodules/git-sh-setup
+!/.config/vcsh/gitmodules/git-submodule
+!/.config/vcsh/gitmodules/vcsh-modules_git-submodule-common.sh
+!/.gitignore.d
+!/.gitignore.d/vcsh-modules
